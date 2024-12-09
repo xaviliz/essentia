@@ -83,7 +83,7 @@ class AudioLoader : public Algorithm {
  public:
   AudioLoader() : Algorithm(), _buffer(0),  _demuxCtx(0),
 	          _audioCtx(0), _audioCodec(0), _decodedFrame(0),
-            _convertCtxAv(0), _configured(false) {
+            _convertCtxAv(0), _resample(0), _configured(false) {
 
     declareOutput(_audio, 1, "audio", "the input audio signal");
     declareOutput(_sampleRate, 0, "sampleRate", "the sampling rate of the audio signal [Hz]");
@@ -104,6 +104,9 @@ class AudioLoader : public Algorithm {
     if (!_md5Encoded) {
         throw EssentiaException("Error allocating the MD5 context");
     }
+    
+    _resample    = factory.create("Resample");
+    // DOUBT! --> should resample out be attached like in Monoloader?
   }
 
   ~AudioLoader();
@@ -115,6 +118,10 @@ class AudioLoader : public Algorithm {
     declareParameter("filename", "the name of the file from which to read", "", Parameter::STRING);
     declareParameter("computeMD5", "compute the MD5 checksum", "{true,false}", false);
     declareParameter("audioStream", "audio stream index to be loaded. Other streams are not taken into account (e.g. if stream 0 is video and 1 is audio use index 0 to access it.)", "[0,inf)", 0);
+    // add resampleQuality param
+    declareParameter("resampleQuality", "the resampling quality, 0 for best quality, 4 for fast linear approximation", "[0,4]", 1);
+    // add inSampleRate parameter to be applied in Resample algo
+    declareParameter("sampleRate", "the desired output sampling rate [Hz]", "(0,inf)", 44100.);
   }
 
   void configure();
@@ -148,6 +155,7 @@ class AudioLoader : public Algorithm {
   Output<std::string> _codec;
 
   streaming::Algorithm* _loader;
+  streaming::Algorithm* _resample;
   streaming::VectorOutput<StereoSample>* _audioStorage;
 
   scheduler::Network* _network;
@@ -176,6 +184,8 @@ class AudioLoader : public Algorithm {
     declareParameter("filename", "the name of the file from which to read", "", Parameter::STRING);
     declareParameter("computeMD5", "compute the MD5 checksum", "{true,false}", false);
     declareParameter("audioStream", "audio stream index to be loaded. Other streams are no taken into account (e.g. if stream 0 is video and 1 is audio use index 0 to access it.)", "[0,inf)", 0);
+    // TODO: add resampleQuality param
+    declareParameter("resampleQuality", "the resampling quality, 0 for best quality, 4 for fast linear approximation", "[0,4]", 1);
   }
 
   void configure();

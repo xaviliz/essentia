@@ -37,8 +37,11 @@ AudioLoader::~AudioLoader() {
     av_freep(&_buffer);
     av_freep(&_md5Encoded);
     av_freep(&_decodedFrame);
+    // TODO: delete resample algo
+    delete _resample;
 }
 
+// TODO: in configure() I consider we should define inputSampleRate, add param as originalSampleRate and configure resample
 void AudioLoader::configure() {
     // set ffmpeg to be silent by default, so we don't have these annoying
     // "invalid new backstep" messages anymore, when everything is actually fine
@@ -47,9 +50,20 @@ void AudioLoader::configure() {
     _computeMD5 = parameter("computeMD5").toBool();
     _selectedStream = parameter("audioStream").toInt();
     reset();
+    
+    //! DOUBT? - accessing to sample rate
+    //Real& sampleRate = _audioCtx->sample_rate;
+    int inputSampleRate = (int)lastTokenProduced<Real>(_audioCtx->sample_rate);
+    
+    //! not sure if this would be need
+    _params.add("originalSampleRate", inputSampleRate);
+
+    _resample->configure("inputSampleRate", inputSampleRate,
+                         "outputSampleRate", parameter("sampleRate"),
+                         "quality", parameter("resampleQuality"));
 }
 
-
+// COMMENT-TO-CLEAN: used in reset()
 void AudioLoader::openAudioFile(const string& filename) {
     E_DEBUG(EAlgorithm, "AudioLoader: opening file: " << filename);
 
@@ -143,7 +157,7 @@ void AudioLoader::openAudioFile(const string& filename) {
     av_md5_init(_md5Encoded);
 }
 
-
+// COMMENT-TO-CLEAN: used in reset(), process() and destructor
 void AudioLoader::closeAudioFile() {
     if (!_demuxCtx) {
         return;
@@ -167,7 +181,7 @@ void AudioLoader::closeAudioFile() {
     _streams.clear();
 }
 
-
+// COMMENT-TO-CLEAN: used in reset()
 void AudioLoader::pushChannelsSampleRateInfo(int nChannels, Real sampleRate) {
     if (nChannels > 2) {
         throw EssentiaException("AudioLoader: could not load audio. Audio file has more than 2 channels.");
@@ -182,13 +196,13 @@ void AudioLoader::pushChannelsSampleRateInfo(int nChannels, Real sampleRate) {
     _sampleRate.push(sampleRate);
 }
 
-
+// COMMENT-TO-CLEAN: used in reset()
 void AudioLoader::pushCodecInfo(std::string codec, int bit_rate) {
     _codec.push(codec);
     _bit_rate.push(bit_rate);
 }
 
-
+// COMMENT-TO-CLEAN: used in process()
 string uint8_t_to_hex(uint8_t* input, int size) {
     ostringstream result;
     for(int i=0; i<size; ++i) {
@@ -249,7 +263,7 @@ AlgorithmStatus AudioLoader::process() {
     return OK;
 }
 
-
+// COMMENT-TO-CLEAN: used in flush_packet() and decode_packet()
 int AudioLoader::decode_audio_frame(AVCodecContext* audioCtx,
                                     float* output,
                                     int* outputSize,
@@ -462,6 +476,8 @@ void AudioLoader::copyFFmpegOutput() {
 
     // release data
     _audio.release(nsamples);
+    
+    // TODO: apply resample here
 }
 
 void AudioLoader::reset() {
@@ -539,6 +555,7 @@ void AudioLoader::compute() {
 
     _audioStorage->setVector(&audio);
     // TODO: is using VectorInput indeed faster than using Pool?
+    
 
     // FIXME:
     // _audio.reserve(sth_meaningful);
