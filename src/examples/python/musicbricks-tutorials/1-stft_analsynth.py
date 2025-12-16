@@ -22,6 +22,12 @@ overl = es.OverlapAdd(
 )
 awrite = es.MonoWriter(filename=str(outputFilename), sampleRate=44100)
 pool = essentia.Pool()
+fcut = es.FrameCutter(frameSize = framesize, hopSize = hopsize, startFromZero =  False)
+w = es.Windowing(type = "hann")
+fft = es.FFT(size = framesize)
+ifft = es.IFFT(size = framesize)
+overl = es.OverlapAdd (frameSize = framesize, hopSize = hopsize, gain = 1./framesize )
+awrite = es.MonoWriter (filename = outputFilename, sampleRate = 44100)
 
 # define a network of connected algorithms using outputs and inputs
 loader.audio >> fcut.signal
