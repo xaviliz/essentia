@@ -13,12 +13,12 @@ environment = { PROJECT_NAME="essentia", ESSENTIA_PROJECT_NAME="${PROJECT_NAME}"
 
 # Use system's Python3 to build Essentia.
 before-all = [
-  "python3 waf configure --with-gaia --build-static --static-dependencies --pkg-config-path=\"${PKG_CONFIG_PATH}\"",
+  "python3 waf configure --with-gaia --build-static --static-dependencies --pkg-config-path=\"${PKG_CONFIG_PATH}\" --with-onnx --std=c++14",
   "python3 waf",
   "python3 waf install",
 ]
 
-test-command = "python -c 'import essentia; import essentia.standard; import essentia.streaming; from essentia.standard import MonoLoader, MetadataReader, YamlInput, Chromaprinter'"
+test-command = "python -c 'import essentia; import essentia.standard; import essentia.streaming; from essentia.standard import MonoLoader, MetadataReader, YamlInput, Chromaprinter, OnnxPredict'"
 
 
 [tool.cibuildwheel.macos]
@@ -51,9 +51,10 @@ environment = { PROJECT_NAME="essentia", ESSENTIA_PROJECT_NAME="${PROJECT_NAME}"
 
 before-all = [
   "brew install pkg-config gcc readline sqlite gdbm libpng",
-  "brew install eigen libyaml fftw ffmpeg libsamplerate libtag chromaprint",
+  "brew install eigen libyaml fftw ffmpeg libsamplerate libtag chromaprint onnxruntime",
   # Override VIRTUAL_ENV set by cibuildwheel to ensure global install
-  "VIRTUAL_ENV=/usr/local python waf configure --pkg-config-path=\"${PKG_CONFIG_PATH}\" --arch arm64 --no-msse",
+  # C++17 is needed to build Onnx Runtime 1.31.0
+  "VIRTUAL_ENV=/usr/local python waf configure --pkg-config-path=\"${PKG_CONFIG_PATH}\" --arch arm64 --no-msse --std=c++17 --with-onnx",
   "python waf",
   "sudo python waf install",
 ]
